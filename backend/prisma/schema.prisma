@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  AGENT
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  role         UserRole @default(USER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdTickets Ticket[] @relation("TicketCreator")
+
+  assignedTickets Ticket[] @relation("TicketAssignee")
+
+  comments Comment[]
+
+  @@index([role])
+}
+
+model Ticket {
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String
+  description String       @db.Text
+  status      TicketStatus @default(OPEN)
+
+  creatorId  String  @db.Uuid
+  assigneeId String? @db.Uuid
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator User @relation("TicketCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+
+  assignee User? @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  comments Comment[]
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([assigneeId])
+  @@index([createdAt])
+
+  @@index([status, createdAt])
+
+  @@index([assigneeId, status])
+}
+
+model Comment {
+  id      String @id @default(uuid()) @db.Uuid
+  content String @db.Text
+
+  ticketId String @db.Uuid
+  authorId String @db.Uuid
+
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([createdAt])
+}
