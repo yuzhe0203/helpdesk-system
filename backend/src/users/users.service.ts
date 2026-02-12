@@ -15,10 +15,17 @@ export class UsersService {
     async createUser(email: string, passwordHash: string): Promise<User> {
         return this.prisma.user.create({
             data: {
-                email,
+                email,  
                 passwordHash,
                 role: UserRole.USER,
             },
+        });
+    }
+
+    async updateRefreshToken(userId: string, refreshTokenHash: string | null){
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { refreshTokenHash },
         });
     }
 
