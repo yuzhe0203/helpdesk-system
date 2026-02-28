@@ -1,5 +1,10 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { UseGuards, Get } from '@nestjs/common';
+import { AccessTokenGuard } from './guards/access-token.guard';
+import { Roles } from './decorators/roles.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { RolesGuard } from './guards/roles.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -21,5 +26,11 @@ export class AuthController {
     @Post('refresh')
     async refresh(@Body() refreshDto: RefreshDto) {
         return this.authService.refresh(refreshDto.refreshToken);
+    }
+
+    @UseGuards(AccessTokenGuard, RolesGuard)
+    @Get('profile')
+    getProfile(@CurrentUser() user: any) {
+        return user;
     }
 }
