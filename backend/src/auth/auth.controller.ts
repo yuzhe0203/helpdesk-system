@@ -28,6 +28,12 @@ export class AuthController {
         return this.authService.refresh(refreshDto.refreshToken);
     }
 
+    @UseGuards(AccessTokenGuard)
+    @Post('logout')
+    async logout(@CurrentUser() user: any) {
+        return this.authService.logout(user.userId);
+    }
+
     @UseGuards(AccessTokenGuard, RolesGuard)
     @Get('profile')
     getProfile(@CurrentUser() user: any) {
