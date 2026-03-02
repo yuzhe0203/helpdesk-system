@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { User, UserRole } from '@prisma/client';
@@ -44,5 +44,31 @@ export class TicketsService {
         updatedAt: true,
       },
     });
+  }
+
+  async findByIdWithScope(ticketId: string, userId: string, role: UserRole) {
+    const where =
+      role === UserRole.USER
+        ? { id: ticketId, creatorId: userId }
+        : { id: ticketId };
+
+    const ticket = await this.prismaService.ticket.findFirst({
+      where,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        creatorId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    return ticket;
   }
 }
