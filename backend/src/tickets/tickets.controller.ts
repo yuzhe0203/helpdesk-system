@@ -5,9 +5,11 @@ import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
+import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { TicketsService } from './tickets.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRole } from '@prisma/client';
+import { request } from 'http';
 
 @Controller('tickets')
 export class TicketsController {
@@ -38,7 +40,20 @@ export class TicketsController {
   @UseGuards(AccessTokenGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.AGENT)
   @Patch(':id/assign')
-  assign(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string, @Body() assignTicketDto: AssignTicketDto, @CurrentUser() user: any) {
+  assign(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string, 
+    @Body() assignTicketDto: AssignTicketDto, 
+    @CurrentUser() user: any) {
     return this.ticketsService.assign(id, assignTicketDto, { userId: user.userId, role: user.role });
+  }
+
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.AGENT)
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string, 
+    @Body() updateTicketStatusDto: UpdateTicketStatusDto,
+    @CurrentUser() user: any){
+    return this.ticketsService.updateStatus(id, updateTicketStatusDto, { userId: user.userId, role: user.role });
   }
 }
