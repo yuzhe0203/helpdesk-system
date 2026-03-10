@@ -1,15 +1,12 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
-import { TicketStatus, User, UserRole } from '@prisma/client';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { ok } from 'assert';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { TicketStatus, UserRole } from '@prisma/client';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+
 
 @Injectable()
 export class TicketsService {
@@ -193,5 +190,64 @@ export class TicketsService {
     });
     
     return updatedTicket;
+  }
+
+  private async findAccessibleTicketOrThrow(ticketId: string, currentUser: any) {
+    let where: any;
+
+    if (currentUser.role === UserRole.USER) {
+      where = { id: ticketId, creatorId: currentUser.userId };
+    }
+    else if (currentUser.role === UserRole.AGENT) {
+      where = { id: ticketId, assigneeId: currentUser.userId };
+    }
+    else if (currentUser.role === UserRole.ADMIN) {
+      where = { id: ticketId };
+    }
+    else {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const ticket = await this.prismaService.ticket.findFirst({
+      where,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        creatorId: true,
+      }
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    return ticket;
+  }
+
+  async createComment( ticketId: string, CreateCommentDto: CreateCommentDto, currentUser: any) {
+    await this.findAccessibleTicketOrThrow(ticketId, currentUser);
+
+    const comment = await this.prismaService.comment.create({
+      data: {
+        ticketId,
+        content: CreateCommentDto.content,
+        authorId: currentUser.userId,
+      }
+    });
+
+    return comment;
+  }
+
+  async getComments(ticketId: string, currentUser: any) {
+    await this.findAccessibleTicketOrThrow(ticketId, currentUser);
+
+    const comments = await this.prismaService.comment.findMany({
+      where: { ticketId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return comments;
   }
 }
