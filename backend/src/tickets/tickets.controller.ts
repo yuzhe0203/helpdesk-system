@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { AccessTokenGuard } from 'src/auth/guards/access-token.guard';
@@ -7,6 +7,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { ListTicketsDto } from './dto/list-tickets.dto';
 import { TicketsService } from './tickets.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRole } from '@prisma/client';
@@ -30,8 +31,8 @@ export class TicketsController {
   // Get all tickets for the current user (or all if admin/agent)
   @UseGuards(AccessTokenGuard)
   @Get()
-  findAllForUser(@CurrentUser() user: any) {
-    return this.ticketsService.findAllForUser(user.userId, user.role);
+  getTickets(@Query() query: ListTicketsDto, @CurrentUser() user: any) {
+    return this.ticketsService.findAllForUser(user.userId, user.role, query);
   }
 
   // Get a specific ticket by ID with access control

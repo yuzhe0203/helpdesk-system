@@ -4,8 +4,10 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { ListTicketsDto } from './dto/list-tickets.dto';
 import { TicketStatus, UserRole } from '@prisma/client';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import e from 'express';
 
 
 @Injectable()
@@ -31,11 +33,33 @@ export class TicketsService {
     });
   }
 
-  async findAllForUser(userId: string, role: UserRole) {
-    const where = role === UserRole.USER ? { creatorId: userId } : {};
+  async findAllForUser(userId: string, role: UserRole, query: ListTicketsDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
 
-    return this.prismaService.ticket.findMany({
+    const where : any = {};
+
+    if (role === UserRole.USER) {
+      where.creatorId = userId;
+    }
+    else if (role === UserRole.AGENT) {
+      where.assigneeId = userId;
+    }
+    else if (role === UserRole.ADMIN) {
+      // no additional filter
+    }
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    const total = await this.prismaService.ticket.count({ where });
+
+    const tickets = await this.prismaService.ticket.findMany({
       where,
+      skip,
+      take: limit,
       orderBy: {
         createdAt: 'desc',
       },
@@ -45,10 +69,21 @@ export class TicketsService {
         description: true,
         status: true,
         creatorId: true,
+        assigneeId: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      page,
+      limit,
+      total,
+      totalPages,
+      data: tickets,
+    }
   }
 
   async findByIdWithScope(ticketId: string, userId: string, role: UserRole) {
@@ -229,10 +264,14 @@ export class TicketsService {
   async createComment( ticketId: string, CreateCommentDto: CreateCommentDto, currentUser: any) {
     await this.findAccessibleTicketOrThrow(ticketId, currentUser);
 
+    if (CreateCommentDto.content.trim() === '') {
+      throw new BadRequestException('Comment content cannot be empty');
+    }
+
     const comment = await this.prismaService.comment.create({
       data: {
         ticketId,
-        content: CreateCommentDto.content,
+        content: CreateCommentDto.content.trim(),
         authorId: currentUser.userId,
       }
     });
