@@ -1,6 +1,7 @@
 import { Navigate, useRoutes } from "react-router-dom";
 import LoginPage from "../pages/LoginPage";
 import TicketsPage from "../pages/TicketsPage";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 export default function AppRouter() {
   return useRoutes([
@@ -14,7 +15,11 @@ export default function AppRouter() {
     },
     {
       path: "/tickets",
-      element: <TicketsPage />,
+      element: (
+        <ProtectedRoute>
+          <TicketsPage />
+        </ProtectedRoute>
+      ),
     },
   ]);
 }
