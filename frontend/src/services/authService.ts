@@ -7,21 +7,9 @@ export async function login(request: LoginRequest): Promise<LoginResponse> {
 }
 
 export async function logout(): Promise<void> {
-    const token = localStorage.getItem("accessToken");
-
     try {
-    if (token) {
-      await api.post(
-        "/auth/logout",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.post("/auth/logout");
+    } finally {
+      localStorage.removeItem("accessToken");
     }
-  } finally {
-    localStorage.removeItem("accessToken");
-  }
 }

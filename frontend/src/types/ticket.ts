@@ -1,3 +1,6 @@
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type TicketFilter = "ALL" | TicketStatus;
+
 export interface Ticket {
     id: string
     title: string
@@ -13,4 +16,10 @@ export interface TicketResponse {
     limit: number
     total: number
     totalPages: number
+}
+
+export interface GetTicketsParams {
+    page: number
+    limit: number
+    status?: TicketStatus
 }
