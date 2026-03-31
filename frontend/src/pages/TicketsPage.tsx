@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { logout } from "../services/authService";
 import { getTickets } from "../services/ticketService";
 import type { Ticket, TicketFilter } from "../types/ticket";
@@ -82,6 +82,8 @@ export default function TicketsPage() {
         <p>Total Pages: {totalPages}</p>
         <p>Total Tickets: {total}</p>
       </div>
+
+      <button onClick={() => navigate("/tickets/create")}>Create Ticket</button>
 
       <div>
         <label htmlFor="statusFilter">Filter by status: </label>

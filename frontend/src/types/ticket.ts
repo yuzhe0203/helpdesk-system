@@ -23,3 +23,17 @@ export interface GetTicketsParams {
     limit: number
     status?: TicketStatus
 }
+
+export interface CreateTicketRequest {
+    title: string
+    description: string
+}
+
+export interface CreateTicketResponse {
+    id: string
+    title: string
+    description: string
+    status: TicketStatus
+    createdAt: string
+    updatedAt: string
+}

@@ -2,6 +2,7 @@ import { Navigate, useRoutes } from "react-router-dom";
 import LoginPage from "../pages/LoginPage";
 import TicketsPage from "../pages/TicketsPage";
 import ProtectedRoute from "../components/ProtectedRoute";
+import CreateTicketPage from "../pages/CreateTicketPage";
 
 export default function AppRouter() {
   return useRoutes([
@@ -18,6 +19,14 @@ export default function AppRouter() {
       element: (
         <ProtectedRoute>
           <TicketsPage />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/tickets/create",
+      element: (
+        <ProtectedRoute>
+          <CreateTicketPage />
         </ProtectedRoute>
       ),
     },

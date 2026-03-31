@@ -1,5 +1,5 @@
 import api from "./api";
-import type { GetTicketsParams, TicketResponse } from "../types/ticket";
+import type { CreateTicketRequest, CreateTicketResponse, GetTicketsParams, Ticket, TicketResponse } from "../types/ticket";
 
 export async function getTickets(params: GetTicketsParams): Promise<TicketResponse> {
     const queryParams: GetTicketsParams= {
@@ -16,4 +16,9 @@ export async function getTickets(params: GetTicketsParams): Promise<TicketRespon
     });
 
     return response.data;
+}
+
+export async function createTicket(request: CreateTicketRequest): Promise<CreateTicketResponse> {
+  const response = await api.post<CreateTicketResponse>("/tickets", request);
+  return response.data;
 }
