@@ -148,6 +148,18 @@ export class AuthService {
         return { accessToken, refreshToken: newRefreshToken };
     }
 
+    async getUserProfile(userId: string) {
+        const user = await this.usersService.findById(userId);
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+        return {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+        };
+    }
+
     async logout(userId: string) {
         await this.usersService.updateRefreshToken(userId, null);
         return { message: 'Logged out successfully' };

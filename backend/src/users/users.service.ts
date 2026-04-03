@@ -28,6 +28,17 @@ export class UsersService {
         });
     }
 
+    async getAllAgents() {
+        return this.prisma.user.findMany({
+            where: { role: UserRole.AGENT },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+            },
+        });
+    }
+
     async updateRefreshToken(userId: string, refreshTokenHash: string | null){
         return this.prisma.user.update({
             where: { id: userId },

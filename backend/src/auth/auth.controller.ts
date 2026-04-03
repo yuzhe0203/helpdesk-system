@@ -34,9 +34,13 @@ export class AuthController {
         return this.authService.logout(user.userId);
     }
 
-    @UseGuards(AccessTokenGuard, RolesGuard)
+    @UseGuards(AccessTokenGuard)
     @Get('profile')
-    getProfile(@CurrentUser() user: any) {
-        return user;
+    async getProfile(@CurrentUser() user: any) {
+        console.log("DEBUG - Backend getProfile called, user object:", user);
+        // Fetch full user data to include email
+        const fullUser = await this.authService.getUserProfile(user.userId);
+        console.log("DEBUG - Backend returning user profile:", fullUser);
+        return fullUser;
     }
 }
