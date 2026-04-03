@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { logout } from "../services/authService";
+import {
+  logout,
+  getUserRole,
+  getUserId,
+  getProfile,
+  saveUserId,
+} from "../services/authService";
 import { getTickets } from "../services/ticketService";
 import type { Ticket, TicketFilter } from "../types/ticket";
 import TicketItem from "../components/TicketItem";
@@ -9,6 +15,11 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [assignmentFilter, setAssignmentFilter] = useState<
+    "ALL" | "ASSIGNED" | "UNASSIGNED"
+  >("ALL"); // For AGENT to toggle between assigned/unassigned
 
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
@@ -17,6 +28,49 @@ export default function TicketsPage() {
   const [filter, setFilter] = useState<TicketFilter>("ALL");
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      console.log("No access token found, redirecting to login");
+      navigate("/login");
+      return;
+    }
+
+    const role = getUserRole();
+    let id = getUserId();
+
+    console.log("=== TicketsPage useEffect ===");
+    console.log("role from localStorage:", role);
+    console.log("id from localStorage:", id);
+    console.log("token exists:", !!token);
+
+    // If no userId in localStorage, fetch from profile
+    if (!id && role === "AGENT") {
+      console.log("userId not found, fetching from profile...");
+      getProfile()
+        .then((profile) => {
+          console.log("Profile fetched:", profile);
+          if (profile.userId) {
+            saveUserId(profile.userId);
+            setUserId(profile.userId);
+            id = profile.userId;
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch profile in TicketsPage:", err);
+          // If profile fetch fails, might be token issue, redirect to login
+          if (err.response?.status === 401) {
+            console.log("Token invalid, redirecting to login");
+            navigate("/login");
+          }
+        });
+    }
+
+    setUserRole(role);
+    setUserId(id);
+  }, [navigate]);
 
   useEffect(() => {
     async function fetchTickets() {
@@ -34,17 +88,38 @@ export default function TicketsPage() {
         setTickets(result.data);
         setTotalPages(result.totalPages);
         setTotal(result.total);
-      } catch (err) {
-        console.error(err);
-        setError("取得 tickets 失敗");
+      } catch (err: any) {
+        console.error("Error loading tickets:", err);
+
+        // Handle 401 Unauthorized - token expired or invalid
+        if (err.response?.status === 401) {
+          console.log(
+            "Unauthorized (401) - clearing session and redirecting to login",
+          );
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("userRole");
+          localStorage.removeItem("userId");
+          navigate("/login");
+          return;
+        }
+
+        setError("Failed to load tickets");
         setTickets([]);
       } finally {
         setLoading(false);
       }
     }
 
+    // Only fetch if we have a token
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setLoading(false);
+      setError("No authentication token found");
+      return;
+    }
+
     fetchTickets();
-  }, [page, limit, filter]);
+  }, [page, limit, filter, navigate]);
 
   function handlePreviousPage() {
     setPage((prev) => Math.max(prev - 1, 1));
@@ -65,63 +140,212 @@ export default function TicketsPage() {
   }
 
   if (loading) {
-    return <div>Loading tickets...</div>;
+    return <div style={{ padding: "20px" }}>Loading tickets...</div>;
   }
 
-  if (error) {
-    return <div>{error}</div>;
+  // Debug: Check userId
+  console.log("DEBUG - userRole:", userRole, "userId:", userId);
+  console.log("DEBUG - tickets count:", tickets.length);
+  if (tickets.length > 0) {
+    console.log("DEBUG - Sample ticket keys:", Object.keys(tickets[0]));
+    console.log("DEBUG - Sample ticket:", JSON.stringify(tickets[0], null, 2));
+  }
+
+  // Separate tickets for AGENT view
+  const assignedTickets =
+    userRole === "AGENT" && userId
+      ? tickets.filter((t) => {
+          const isAssigned = t.assigneeId === userId;
+          console.log(
+            "DEBUG - ticket:",
+            t.id,
+            "assigneeId:",
+            t.assigneeId,
+            "userId:",
+            userId,
+            "match:",
+            isAssigned,
+          );
+          return isAssigned;
+        })
+      : [];
+  const unassignedTickets =
+    userRole === "AGENT"
+      ? tickets.filter((t) => !t.assigneeId) // Handles both null and undefined
+      : [];
+
+  // Filter tickets for display based on assignmentFilter (AGENT mode)
+  let displayTickets = tickets;
+  if (userRole === "AGENT") {
+    if (assignmentFilter === "ASSIGNED") {
+      displayTickets = assignedTickets;
+    } else if (assignmentFilter === "UNASSIGNED") {
+      displayTickets = unassignedTickets;
+    } else {
+      displayTickets = tickets;
+    }
   }
 
   return (
-    <div>
-      <h1>Tickets</h1>
-      <button onClick={handleLogout}>Logout</button>
-
-      <div>
-        <p>Page: {page}</p>
-        <p>Total Pages: {totalPages}</p>
-        <p>Total Tickets: {total}</p>
-      </div>
-
-      <button onClick={() => navigate("/tickets/create")}>Create Ticket</button>
-
-      <div>
-        <label htmlFor="statusFilter">Filter by status: </label>
-        <select
-          id="statusFilter"
-          value={filter}
-          onChange={(e) => {
-            setFilter(e.target.value as TicketFilter);
-            setPage(1); // Reset to first page when filter changes
-          }}
-        >
-          <option value="ALL">ALL</option>
-          <option value="OPEN">OPEN</option>
-          <option value="IN_PROGRESS">IN_PROGRESS</option>
-          <option value="RESOLVED">RESOLVED</option>
-          <option value="CLOSED">CLOSED</option>
-        </select>
-      </div>
-
-      <div>
-        <button onClick={handlePreviousPage} disabled={page === 1}>
-          Previous
-        </button>
-
-        <button onClick={handleNextPage} disabled={page === totalPages}>
-          Next
+    <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0 }}>Tickets</h1>
+          {userRole && (
+            <p
+              style={{ margin: "5px 0 0 0", color: "#666", fontSize: "0.9em" }}
+            >
+              Role: <strong>{userRole}</strong>
+            </p>
+          )}
+        </div>
+        <button onClick={handleLogout} style={{ padding: "8px 16px" }}>
+          Logout
         </button>
       </div>
 
-      {tickets.length === 0 ? (
-        <p>目前沒有 ticket</p>
+      {error && <p style={{ color: "red", marginBottom: "20px" }}>{error}</p>}
+
+      <div
+        style={{
+          marginBottom: "20px",
+          display: "flex",
+          gap: "10px",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {userRole === "USER" && (
+          <Link to="/tickets/create">
+            <button style={{ padding: "8px 16px" }}>+ Create Ticket</button>
+          </Link>
+        )}
+        {userRole === "AGENT" && (
+          <div
+            style={{
+              padding: "8px 16px",
+              color: "#666",
+              fontSize: "0.9em",
+              fontStyle: "italic",
+            }}
+          >
+            👨‍💼 Agent Mode: Manage assigned tickets
+          </div>
+        )}
+        {userRole === "ADMIN" && (
+          <Link to="/tickets/create">
+            <button style={{ padding: "8px 16px" }}>+ Create Ticket</button>
+          </Link>
+        )}
+
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <label htmlFor="statusFilter">Filter: </label>
+          <select
+            id="statusFilter"
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value as TicketFilter);
+              setPage(1);
+            }}
+            style={{ padding: "6px" }}
+          >
+            <option value="ALL">All</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+
+          {userRole === "AGENT" && (
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => setAssignmentFilter("ALL")}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor:
+                    assignmentFilter === "ALL" ? "#333" : "#e0e0e0",
+                  color: assignmentFilter === "ALL" ? "white" : "#333",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setAssignmentFilter("ASSIGNED")}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor:
+                    assignmentFilter === "ASSIGNED" ? "#4CAF50" : "#e0e0e0",
+                  color: assignmentFilter === "ASSIGNED" ? "white" : "#333",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                ✅ Assigned
+              </button>
+              <button
+                onClick={() => setAssignmentFilter("UNASSIGNED")}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor:
+                    assignmentFilter === "UNASSIGNED" ? "#FF9800" : "#e0e0e0",
+                  color: assignmentFilter === "UNASSIGNED" ? "white" : "#333",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                ⏳ Unassigned
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: "20px", color: "#666" }}>
+        <p>
+          Page {page} of {totalPages} | Total: {total} tickets
+        </p>
+      </div>
+
+      {/* Tickets list - filtered by assignmentFilter for AGENT users */}
+      {displayTickets.length === 0 ? (
+        <p style={{ padding: "20px", textAlign: "center", color: "#999" }}>
+          No tickets found
+        </p>
       ) : (
-        <ul>
-          {tickets.map((ticket) => (
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {displayTickets.map((ticket) => (
             <TicketItem key={ticket.id} ticket={ticket} />
           ))}
         </ul>
       )}
+
+      <div
+        style={{
+          marginTop: "20px",
+          display: "flex",
+          gap: "10px",
+          justifyContent: "center",
+        }}
+      >
+        <button onClick={handlePreviousPage} disabled={page === 1}>
+          ← Previous
+        </button>
+        <button onClick={handleNextPage} disabled={page === totalPages}>
+          Next →
+        </button>
+      </div>
     </div>
   );
 }
