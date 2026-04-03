@@ -44,7 +44,11 @@ export class TicketsService {
       where.creatorId = userId;
     }
     else if (role === UserRole.AGENT) {
-      where.assigneeId = userId;
+      // AGENT can see unassigned tickets and tickets assigned to them
+      where.OR = [
+        { assigneeId: userId },
+        { assigneeId: null }
+      ];
     }
     else if (role === UserRole.ADMIN) {
       // no additional filter
@@ -72,6 +76,20 @@ export class TicketsService {
         assigneeId: true,
         createdAt: true,
         updatedAt: true,
+        creator: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
       },
     });
 
@@ -100,8 +118,42 @@ export class TicketsService {
         description: true,
         status: true,
         creatorId: true,
+        assigneeId: true,
         createdAt: true,
         updatedAt: true,
+        creator: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+        assignee: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+        comments: {
+          select: {
+            id: true,
+            content: true,
+            ticketId: true,
+            authorId: true,
+            createdAt: true,
+            author: {
+              select: {
+                id: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
       },
     });
 
@@ -120,7 +172,7 @@ export class TicketsService {
     // Check if the ticket exists
     const ticket = await this.prismaService.ticket.findUnique({
       where: { id: ticketId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, assigneeId: true },
     });
 
     // If the ticket doesn't exist, throw a 404 error
@@ -151,8 +203,12 @@ export class TicketsService {
       assigneeId: assignTicketDto.assigneeId,
     };
 
-    // If the ticket is being assigned for the first time, change the status to IN_PROGRESS
+    // If the ticket is being assigned for the first time (OPEN status), change to IN_PROGRESS
     if (ticket.status === 'OPEN') {
+      data.status = 'IN_PROGRESS';
+    }
+    // If the ticket is being reassigned to a different agent, also change to IN_PROGRESS
+    else if (ticket.assigneeId !== null && ticket.assigneeId !== assignTicketDto.assigneeId) {
       data.status = 'IN_PROGRESS';
     }
 
@@ -273,7 +329,21 @@ export class TicketsService {
         ticketId,
         content: CreateCommentDto.content.trim(),
         authorId: currentUser.userId,
-      }
+      },
+      select: {
+        id: true,
+        content: true,
+        ticketId: true,
+        authorId: true,
+        createdAt: true,
+        author: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     });
 
     return comment;
@@ -284,6 +354,20 @@ export class TicketsService {
 
     const comments = await this.prismaService.comment.findMany({
       where: { ticketId },
+      select: {
+        id: true,
+        content: true,
+        ticketId: true,
+        authorId: true,
+        createdAt: true,
+        author: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
 
