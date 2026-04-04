@@ -2,12 +2,11 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UseGuards, Get } from '@nestjs/common';
 import { AccessTokenGuard } from './guards/access-token.guard';
-import { Roles } from './decorators/roles.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { RolesGuard } from './guards/roles.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { CurrentUserPayload } from '../common/types/user.types';
 
 @Controller('auth')
 export class AuthController {
@@ -30,17 +29,15 @@ export class AuthController {
 
     @UseGuards(AccessTokenGuard)
     @Post('logout')
-    async logout(@CurrentUser() user: any) {
+    async logout(@CurrentUser() user: CurrentUserPayload) {
         return this.authService.logout(user.userId);
     }
 
     @UseGuards(AccessTokenGuard)
     @Get('profile')
-    async getProfile(@CurrentUser() user: any) {
-        console.log("DEBUG - Backend getProfile called, user object:", user);
+    async getProfile(@CurrentUser() user: CurrentUserPayload) {
         // Fetch full user data to include email
         const fullUser = await this.authService.getUserProfile(user.userId);
-        console.log("DEBUG - Backend returning user profile:", fullUser);
         return fullUser;
     }
 }

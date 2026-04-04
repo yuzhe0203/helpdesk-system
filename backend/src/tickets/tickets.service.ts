@@ -6,8 +6,7 @@ import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ListTicketsDto } from './dto/list-tickets.dto';
 import { TicketStatus, UserRole } from '@prisma/client';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import e from 'express';
+import { CurrentUserPayload } from 'src/common/types/user.types';
 
 
 @Injectable()
@@ -38,7 +37,11 @@ export class TicketsService {
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
 
-    const where : any = {};
+    const where: {
+      creatorId?: string;
+      status?: TicketStatus;
+      OR?: { assigneeId: string | null }[];
+    } = {};
 
     if (role === UserRole.USER) {
       where.creatorId = userId;
@@ -199,7 +202,7 @@ export class TicketsService {
     }
 
     // udate the ticket with the new assignee
-    const data: any = {
+    const data: { assigneeId: string; status?: TicketStatus } = {
       assigneeId: assignTicketDto.assigneeId,
     };
 
@@ -283,8 +286,8 @@ export class TicketsService {
     return updatedTicket;
   }
 
-  private async findAccessibleTicketOrThrow(ticketId: string, currentUser: any) {
-    let where: any;
+  private async findAccessibleTicketOrThrow(ticketId: string, currentUser: CurrentUserPayload) {
+    let where: { id: string; creatorId?: string; assigneeId?: string };
 
     if (currentUser.role === UserRole.USER) {
       where = { id: ticketId, creatorId: currentUser.userId };
@@ -317,7 +320,7 @@ export class TicketsService {
     return ticket;
   }
 
-  async createComment( ticketId: string, CreateCommentDto: CreateCommentDto, currentUser: any) {
+  async createComment( ticketId: string, CreateCommentDto: CreateCommentDto, currentUser: CurrentUserPayload) {
     await this.findAccessibleTicketOrThrow(ticketId, currentUser);
 
     if (CreateCommentDto.content.trim() === '') {
@@ -349,7 +352,7 @@ export class TicketsService {
     return comment;
   }
 
-  async getComments(ticketId: string, currentUser: any) {
+  async getComments(ticketId: string, currentUser: CurrentUserPayload) {
     await this.findAccessibleTicketOrThrow(ticketId, currentUser);
 
     const comments = await this.prismaService.comment.findMany({
