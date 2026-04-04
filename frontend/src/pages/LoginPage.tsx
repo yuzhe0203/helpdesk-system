@@ -33,15 +33,11 @@ export default function LoginPage() {
       // Fetch and save user profile with role and userId
       try {
         const profile = await getProfile();
-        console.log("DEBUG - getProfile response:", profile);
         if (profile && profile.role) {
           saveUserRole(profile.role);
         }
         if (profile && profile.userId) {
           saveUserId(profile.userId);
-          console.log("DEBUG - Saved userId:", profile.userId);
-        } else {
-          console.warn("DEBUG - WARNING: profile.userId is missing!", profile);
         }
       } catch (profileErr) {
         console.error("Failed to fetch profile:", profileErr);

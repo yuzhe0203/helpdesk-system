@@ -33,7 +33,6 @@ export default function TicketsPage() {
     // Check if user is authenticated
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      console.log("No access token found, redirecting to login");
       navigate("/login");
       return;
     }
@@ -41,17 +40,10 @@ export default function TicketsPage() {
     const role = getUserRole();
     let id = getUserId();
 
-    console.log("=== TicketsPage useEffect ===");
-    console.log("role from localStorage:", role);
-    console.log("id from localStorage:", id);
-    console.log("token exists:", !!token);
-
     // If no userId in localStorage, fetch from profile
     if (!id && role === "AGENT") {
-      console.log("userId not found, fetching from profile...");
       getProfile()
         .then((profile) => {
-          console.log("Profile fetched:", profile);
           if (profile.userId) {
             saveUserId(profile.userId);
             setUserId(profile.userId);
@@ -62,7 +54,6 @@ export default function TicketsPage() {
           console.error("Failed to fetch profile in TicketsPage:", err);
           // If profile fetch fails, might be token issue, redirect to login
           if (err.response?.status === 401) {
-            console.log("Token invalid, redirecting to login");
             navigate("/login");
           }
         });
@@ -83,7 +74,6 @@ export default function TicketsPage() {
           limit,
           status: filter === "ALL" ? undefined : filter,
         });
-        console.log("tickets result:", result);
 
         setTickets(result.data);
         setTotalPages(result.totalPages);
@@ -93,9 +83,6 @@ export default function TicketsPage() {
 
         // Handle 401 Unauthorized - token expired or invalid
         if (err.response?.status === 401) {
-          console.log(
-            "Unauthorized (401) - clearing session and redirecting to login",
-          );
           localStorage.removeItem("accessToken");
           localStorage.removeItem("userRole");
           localStorage.removeItem("userId");
@@ -143,29 +130,11 @@ export default function TicketsPage() {
     return <div style={{ padding: "20px" }}>Loading tickets...</div>;
   }
 
-  // Debug: Check userId
-  console.log("DEBUG - userRole:", userRole, "userId:", userId);
-  console.log("DEBUG - tickets count:", tickets.length);
-  if (tickets.length > 0) {
-    console.log("DEBUG - Sample ticket keys:", Object.keys(tickets[0]));
-    console.log("DEBUG - Sample ticket:", JSON.stringify(tickets[0], null, 2));
-  }
-
   // Separate tickets for AGENT view
   const assignedTickets =
     userRole === "AGENT" && userId
       ? tickets.filter((t) => {
           const isAssigned = t.assigneeId === userId;
-          console.log(
-            "DEBUG - ticket:",
-            t.id,
-            "assigneeId:",
-            t.assigneeId,
-            "userId:",
-            userId,
-            "match:",
-            isAssigned,
-          );
           return isAssigned;
         })
       : [];
