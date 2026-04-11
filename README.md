@@ -280,11 +280,12 @@ GET    /auth/profile            Get current user profile
 ### Tickets
 
 ```
-POST   /tickets                 Create new ticket (USER)
+POST   /tickets                 Create new ticket (USER only)
 GET    /tickets                 List tickets (filtered by role)
-GET    /tickets/:id             Get ticket details
-PATCH  /tickets/:id/assign      Assign ticket to agent
-PATCH  /tickets/:id/status      Update ticket status
+                                  ?page=1&limit=10&status=OPEN
+GET    /tickets/:id             Get ticket details with comments
+PATCH  /tickets/:id/assign      Assign ticket to agent (ADMIN / AGENT)
+PATCH  /tickets/:id/status      Update ticket status (ADMIN / AGENT)
 ```
 
 ### Comments
@@ -292,6 +293,12 @@ PATCH  /tickets/:id/status      Update ticket status
 ```
 POST   /tickets/:id/comments    Add comment to ticket
 GET    /tickets/:id/comments    Get all ticket comments
+```
+
+### System
+
+```
+GET    /health                  Health check (returns status and timestamp)
 ```
 
 ### Users
@@ -360,12 +367,40 @@ GET    /users/agents            Get list of all agents (for assignment dropdown)
 
 - ✅ Password hashing with bcrypt
 - ✅ JWT token-based authentication
-- ✅ Refresh token rotation (invalidates old tokens)
+- ✅ Refresh token rotation (invalidates old tokens on every refresh)
 - ✅ Role-based access control guards
 - ✅ Protected API endpoints
 - ✅ Authorization checks on all operations
 - ✅ Token stored in localStorage with validation
 - ✅ Automatic logout on 401 Unauthorized
+- ✅ Strict TypeScript — zero `any` types in production code
+- ✅ Global exception filter with safe error response shaping
+
+---
+
+## 🧪 Testing
+
+**55 unit tests across 8 test suites — all passing.**
+
+```bash
+cd backend
+npx jest --coverage
+```
+
+| Module                  | Coverage        |
+| ----------------------- | --------------- |
+| `auth.service.ts`       | ~98% statements |
+| `auth.controller.ts`    | 100% statements |
+| `roles.guard.ts`        | 100% statements |
+| `tickets.service.ts`    | ~93% statements |
+| `tickets.controller.ts` | 100% statements |
+
+**Test strategy:**
+
+- Services are tested in isolation with full Prisma mock objects
+- Controllers are tested as thin delegating layers
+- Guards are tested with mocked `ExecutionContext` and `Reflector`
+- `bcrypt` is module-mocked to avoid real hashing overhead
 
 ---
 
@@ -387,32 +422,35 @@ GET    /users/agents            Get list of all agents (for assignment dropdown)
 
 ### Environment Variables
 
-**Backend (.env)**
+**Backend (`.env`)**
 
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/helpdesk
-JWT_SECRET=your_secret_key
-JWT_EXPIRY=15m
-REFRESH_TOKEN_EXPIRY=7d
+```env
+DATABASE_URL=postgresql://helpdesk:helpdesk_pass@localhost:5540/helpdesk_db
+
+JWT_ACCESS_SECRET=your_access_token_secret
+JWT_ACCESS_EXPIRES_IN=15m
+
+JWT_REFRESH_SECRET=your_refresh_token_secret
+JWT_REFRESH_EXPIRES_IN=7d
+
+PORT=3000
 ```
 
 ---
 
 ## 🚧 Future Improvements
 
-- [ ] Ticket search and advanced filtering
-- [ ] Sorting by creation date, status, assignee
 - [ ] Admin dashboard with system statistics
 - [ ] AGENT workload visualization
 - [ ] Email notifications for ticket updates
 - [ ] File attachments on tickets and comments
 - [ ] Ticket priority levels
 - [ ] SLA tracking and reporting
-- [ ] Audit logging
 - [ ] Bulk ticket operations
-- [ ] Dark mode UI toggle
-- [ ] Pagination customization
+- [ ] Ticket search and advanced filtering
 - [ ] API documentation with Swagger/OpenAPI
+- [ ] Dark mode UI toggle
+- [ ] CI/CD pipeline with GitHub Actions
 
 ---
 
