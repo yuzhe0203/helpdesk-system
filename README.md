@@ -58,6 +58,7 @@ helpdesk-system/
 - **Authentication:** JWT (Access Token + Refresh Token Rotation)
 - **Authorization:** RBAC (Role-Based Access Control)
 - **Password Hashing:** bcrypt
+- **API Documentation:** Swagger / OpenAPI (`@nestjs/swagger`)
 
 ---
 
@@ -309,6 +310,22 @@ GET    /users/agents            Get list of all agents (for assignment dropdown)
 
 ---
 
+## 📖 API Documentation (Swagger UI)
+
+After starting the backend, open your browser at:
+
+```
+http://localhost:3000/api-docs
+```
+
+All endpoints are grouped by tag (`auth`, `tickets`, `users`, `system`) and can be tested interactively:
+
+1. Call `POST /auth/login` → copy the returned `accessToken`
+2. Click the **Authorize** button (top right) → paste the token
+3. All authenticated endpoints are now testable directly from the UI
+
+---
+
 ## 📦 Database Models
 
 ### User
@@ -448,7 +465,7 @@ PORT=3000
 - [ ] SLA tracking and reporting
 - [ ] Bulk ticket operations
 - [ ] Ticket search and advanced filtering
-- [ ] API documentation with Swagger/OpenAPI
+- [x] API documentation with Swagger/OpenAPI
 - [ ] Dark mode UI toggle
 - [ ] CI/CD pipeline with GitHub Actions
 
