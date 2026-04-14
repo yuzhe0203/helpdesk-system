@@ -397,11 +397,13 @@ All endpoints are grouped by tag (`auth`, `tickets`, `users`, `system`) and can 
 
 ## 🧪 Testing
 
+### Unit Tests
+
 **55 unit tests across 8 test suites — all passing.**
 
 ```bash
 cd backend
-npx jest --coverage
+npm test --coverage
 ```
 
 | Module                  | Coverage        |
@@ -418,6 +420,64 @@ npx jest --coverage
 - Controllers are tested as thin delegating layers
 - Guards are tested with mocked `ExecutionContext` and `Reflector`
 - `bcrypt` is module-mocked to avoid real hashing overhead
+
+---
+
+### E2E Tests
+
+**46 end-to-end tests across 4 test suites — all passing.**
+
+Tests run against a real PostgreSQL instance (isolated test database) via Supertest.
+
+#### Setup
+
+**1. Start the test database**
+
+```bash
+docker compose -f docker/compose.yml up db_test -d
+```
+
+**2. Create `backend/.env.test`** (copy from `.env.test.example` and fill in values)
+
+```env
+DATABASE_URL="postgresql://helpdesk:helpdesk_pass@localhost:5541/helpdesk_test"
+
+JWT_SECRET=your-jwt-secret-key
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=your-jwt-refresh-secret-key
+JWT_REFRESH_EXPIRES_IN=7d
+```
+
+**3. Run migrations against the test database**
+
+```bash
+cd backend
+npm run test:e2e:migrate
+```
+
+**4. Run E2E tests**
+
+```bash
+npm run test:e2e
+```
+
+#### Coverage
+
+| Suite                 | Tests | Endpoints Covered                                                                                        |
+| --------------------- | ----- | -------------------------------------------------------------------------------------------------------- |
+| `app.e2e-spec.ts`     | 1     | `GET /health`                                                                                            |
+| `auth.e2e-spec.ts`    | 15    | `POST /auth/register`, `login`, `refresh`, `logout`, `GET /profile`                                      |
+| `tickets.e2e-spec.ts` | 25    | `POST /tickets`, `GET /tickets`, `GET /tickets/:id`, `PATCH assign`, `PATCH status`, `POST/GET comments` |
+| `users.e2e-spec.ts`   | 4     | `GET /users/agents`                                                                                      |
+
+Each suite verifies:
+
+- ✅ Happy path responses
+- ✅ Role-based access control (USER / AGENT / ADMIN)
+- ✅ 401 Unauthorized without token
+- ✅ 403 Forbidden for wrong role
+- ✅ 400 Bad Request for invalid input
+- ✅ 404 Not Found for non-existent resources
 
 ---
 
@@ -466,6 +526,7 @@ PORT=3000
 - [ ] Bulk ticket operations
 - [ ] Ticket search and advanced filtering
 - [x] API documentation with Swagger/OpenAPI
+- [x] E2E tests for all API endpoints
 - [ ] Dark mode UI toggle
 - [ ] CI/CD pipeline with GitHub Actions
 
