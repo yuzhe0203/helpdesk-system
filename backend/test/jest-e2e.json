@@ -4,6 +4,19 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": {
+          "module": "commonjs",
+          "moduleResolution": "node",
+          "resolvePackageJsonExports": false,
+          "ignoreDeprecations": "5.0"
+        }
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^src/(.*)$": "<rootDir>/../src/$1"
   }
 }
